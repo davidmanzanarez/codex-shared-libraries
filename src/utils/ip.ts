@@ -9,22 +9,28 @@ const INTERNAL_IP_PATTERNS = [
   /^127\.0\.0\.1$/,
   /^localhost$/,
   /^::1$/,
+  /^unknown$/,  // Treat unknown IPs as internal (local dev without proxy)
 ];
 
 /**
  * Extract client IP from request headers
  * Checks Cloudflare, X-Forwarded-For, X-Real-IP in order
+ * Falls back to 'unknown' if no headers present (local dev)
  */
 export function getClientIP(c: Context): string {
+  // Production: Cloudflare
   const cfConnectingIP = c.req.header('cf-connecting-ip');
   if (cfConnectingIP) return cfConnectingIP;
 
+  // Production: Reverse proxy
   const forwarded = c.req.header('x-forwarded-for');
   if (forwarded) return forwarded.split(',')[0].trim();
 
   const realIP = c.req.header('x-real-ip');
   if (realIP) return realIP;
 
+  // Local development: no proxy headers, return unknown
+  // This will be treated as internal by isInternalRequest()
   return 'unknown';
 }
 

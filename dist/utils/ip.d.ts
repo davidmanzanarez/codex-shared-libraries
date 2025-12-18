@@ -2,6 +2,7 @@ import type { Context } from 'hono';
 /**
  * Extract client IP from request headers
  * Checks Cloudflare, X-Forwarded-For, X-Real-IP in order
+ * Falls back to 'unknown' if no headers present (local dev)
  */
 export declare function getClientIP(c: Context): string;
 /**
