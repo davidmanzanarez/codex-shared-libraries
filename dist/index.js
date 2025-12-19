@@ -4,4 +4,6 @@ export * from './types/index.js';
 export * from './utils/index.js';
 // Middleware
 export * from './middleware/index.js';
+// Routes
+export * from './routes/index.js';
 //# sourceMappingURL=index.js.map
