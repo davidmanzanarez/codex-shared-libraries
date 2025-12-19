@@ -8,7 +8,7 @@ import { getRecentMetrics, getAggregatedStats, getSuspiciousRequests, getRequest
  * Create metrics routes for a service
  *
  * @example
- * import { createMetricsRoutes } from '@dodekatloi/shared';
+ * import { createMetricsRoutes } from '@codex/shared';
  *
  * const metricsRoutes = createMetricsRoutes({
  *   store: metricsStore,

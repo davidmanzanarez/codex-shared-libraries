@@ -1,7 +1,7 @@
 {
-  "name": "@dodekatloi/shared",
+  "name": "@codex/shared",
   "version": "0.1.0",
-  "description": "Shared utilities, middleware, and types for Dodekatloi services",
+  "description": "Shared utilities, middleware, and types for web services",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

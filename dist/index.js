@@ -1,5 +1,5 @@
 /**
- * @dodekatloi/shared - Shared utilities for Dodekatloi services
+ * @codex/shared - Shared utilities for web services
  *
  * ⚠️  PUBLIC REPOSITORY - DO NOT ADD SECRETS OR SENSITIVE CONFIG ⚠️
  *

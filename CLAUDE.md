@@ -1,4 +1,4 @@
-# @dodekatloi/shared - Claude Code Context
+# @codex/shared - Claude Code Context
 
 ## ⚠️ CRITICAL: THIS IS A PUBLIC REPOSITORY ⚠️
 
@@ -26,9 +26,9 @@ Before making ANY changes, read `SECURITY.md` in this repo.
 
 | Property | Value |
 |----------|-------|
-| Name | @dodekatloi/shared |
-| Purpose | Shared utilities, middleware, and types for Dodekatloi services |
-| Install | `"@dodekatloi/shared": "github:davidmanzanarez/codex-shared-libraries"` |
+| Name | @codex/shared |
+| Purpose | Shared utilities, middleware, and types for web services |
+| Install | `"@codex/shared": "github:davidmanzanarez/codex-shared-libraries"` |
 
 ---
 
@@ -44,7 +44,7 @@ Request metrics middleware for security analysis. Tracks:
 - Suspicious request patterns (XSS, SQL injection, path traversal)
 
 ```typescript
-import { createMetricsStore, metricsLogger, getAggregatedStats } from '@dodekatloi/shared';
+import { createMetricsStore, metricsLogger, getAggregatedStats } from '@codex/shared';
 
 const metricsStore = createMetricsStore();
 
@@ -81,7 +81,7 @@ Add to your service's `packages/server/package.json`:
 ```json
 {
   "dependencies": {
-    "@dodekatloi/shared": "github:davidmanzanarez/codex-shared-libraries"
+    "@codex/shared": "github:davidmanzanarez/codex-shared-libraries"
   }
 }
 ```
@@ -92,12 +92,12 @@ Then `npm install`.
 
 ```typescript
 // Import everything
-import { metricsLogger, createMetricsStore, AuthUser } from '@dodekatloi/shared';
+import { metricsLogger, createMetricsStore, AuthUser } from '@codex/shared';
 
 // Or import from subpaths
-import { metricsLogger, createMetricsStore } from '@dodekatloi/shared/middleware';
-import { AuthUser, RequestMetric } from '@dodekatloi/shared/types';
-import { getClientIP } from '@dodekatloi/shared/utils';
+import { metricsLogger, createMetricsStore } from '@codex/shared/middleware';
+import { AuthUser, RequestMetric } from '@codex/shared/types';
+import { getClientIP } from '@codex/shared/utils';
 ```
 
 ---
@@ -126,12 +126,12 @@ Since this package is installed via GitHub URL, services will pull the latest ve
 
 To pin a specific version, use a commit SHA:
 ```json
-"@dodekatloi/shared": "github:davidmanzanarez/codex-shared-libraries#abc1234"
+"@codex/shared": "github:davidmanzanarez/codex-shared-libraries#abc1234"
 ```
 
 Or use a tag:
 ```json
-"@dodekatloi/shared": "github:davidmanzanarez/codex-shared-libraries#v0.1.0"
+"@codex/shared": "github:davidmanzanarez/codex-shared-libraries#v0.1.0"
 ```
 
 ---
@@ -142,4 +142,4 @@ Or use a tag:
 2. Export from the directory's `index.ts`
 3. Run `npm run build` to verify
 4. Commit and push
-5. In each service, run `npm update @dodekatloi/shared`
+5. In each service, run `npm update @codex/shared`
