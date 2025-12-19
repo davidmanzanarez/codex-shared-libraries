@@ -39,11 +39,14 @@
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
-    "hono": "^4.0.0"
+    "hono": "^4.0.0",
+    "jsonwebtoken": "^9.0.0"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.10.1",
     "hono": "^4.6.12",
+    "jsonwebtoken": "^9.0.2",
     "typescript": "^5.7.2"
   },
   "repository": {
