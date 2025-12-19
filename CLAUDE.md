@@ -1,5 +1,27 @@
 # @dodekatloi/shared - Claude Code Context
 
+## ⚠️ CRITICAL: THIS IS A PUBLIC REPOSITORY ⚠️
+
+**This repository is PUBLIC. Anyone on the internet can read this code.**
+
+Before making ANY changes, read `SECURITY.md` in this repo.
+
+### NEVER add to this repository:
+- Secrets, API keys, tokens, passwords
+- Internal IP addresses or hostnames
+- Actual production configuration values
+- Database connection strings
+- Any sensitive or proprietary information
+
+### This repo should ONLY contain:
+- Generic, reusable middleware logic
+- Type definitions
+- Utility functions with NO hardcoded secrets
+
+**When in doubt, ASK the user before adding new code.**
+
+---
+
 ## Package Identity
 
 | Property | Value |

@@ -1,3 +1,12 @@
+/**
+ * @dodekatloi/shared - Shared utilities for Dodekatloi services
+ *
+ * ⚠️  PUBLIC REPOSITORY - DO NOT ADD SECRETS OR SENSITIVE CONFIG ⚠️
+ *
+ * This package contains ONLY generic, reusable code.
+ * See SECURITY.md for what must never be added here.
+ */
+
 // Types
 export * from './types/index.js';
 

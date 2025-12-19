@@ -23,13 +23,13 @@ export interface AuthMiddlewareConfig {
     jwtSecret: string;
     /**
      * Public-facing Hub URL for login redirects
-     * e.g., 'https://hub.davmanz.com' or 'http://localhost:6101'
+     * e.g., 'https://hub.example.com' or 'http://localhost:6100'
      * NEVER use internal Docker URLs here (like 'http://hub:6100')
      */
     hubPublicUrl: string;
     /**
      * This service's public frontend URL for returnTo parameter
-     * e.g., 'https://memo.davmanz.com' or 'http://localhost:6601'
+     * e.g., 'https://myapp.example.com' or 'http://localhost:3000'
      */
     frontendUrl: string;
 }
