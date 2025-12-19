@@ -5,8 +5,6 @@
  * Supports:
  * - Global rate limits (apply to all routes)
  * - Per-endpoint rate limits (override global for specific paths)
- *
- * TODO: Add rate limiting to Vitae (oura) and Decalogue (hub) services
  */
 import type { Context, Next } from 'hono';
 export interface RateLimitConfig {
