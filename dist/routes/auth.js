@@ -37,7 +37,7 @@ import jwt from 'jsonwebtoken';
  */
 export function createAuthRoutes(config) {
     const { jwtSecret, hubPublicUrl, selfUrl, frontendUrl, isProduction = process.env.NODE_ENV === 'production', cookieMaxAge = 60 * 60 * 24 * 7, // 7 days
-     } = config;
+    cookieDomain, } = config;
     // Validate config at creation time (fail fast)
     if (!jwtSecret) {
         throw new Error('AuthRoutes: jwtSecret is required');
@@ -79,7 +79,7 @@ export function createAuthRoutes(config) {
         }
         catch {
             // Invalid or expired token - clear it
-            deleteCookie(c, 'auth_token', { path: '/' });
+            deleteCookie(c, 'auth_token', { path: '/', domain: cookieDomain });
             return c.json({
                 authenticated: false,
                 user: null,
@@ -116,6 +116,7 @@ export function createAuthRoutes(config) {
                 sameSite: 'Lax',
                 maxAge: cookieMaxAge,
                 path: '/',
+                domain: cookieDomain,
             });
             // Redirect to frontend
             return c.redirect(frontendUrl);
@@ -128,7 +129,7 @@ export function createAuthRoutes(config) {
      * POST /logout - Clear auth cookie
      */
     app.post('/logout', (c) => {
-        deleteCookie(c, 'auth_token', { path: '/' });
+        deleteCookie(c, 'auth_token', { path: '/', domain: cookieDomain });
         return c.json({ success: true });
     });
     return app;

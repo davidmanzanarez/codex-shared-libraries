@@ -50,6 +50,13 @@ export interface AuthRoutesConfig {
    * Default: 7 days (604800 seconds)
    */
   cookieMaxAge?: number;
+
+  /**
+   * Cookie domain for cross-subdomain auth
+   * e.g., '.example.com' to share cookie across all subdomains
+   * IMPORTANT: Must match Hub's cookie domain for logout to work properly
+   */
+  cookieDomain?: string;
 }
 
 /**
@@ -83,6 +90,7 @@ export function createAuthRoutes(config: AuthRoutesConfig) {
     frontendUrl,
     isProduction = process.env.NODE_ENV === 'production',
     cookieMaxAge = 60 * 60 * 24 * 7, // 7 days
+    cookieDomain,
   } = config;
 
   // Validate config at creation time (fail fast)
@@ -132,7 +140,7 @@ export function createAuthRoutes(config: AuthRoutesConfig) {
       return c.json({ authenticated: true, user });
     } catch {
       // Invalid or expired token - clear it
-      deleteCookie(c, 'auth_token', { path: '/' });
+      deleteCookie(c, 'auth_token', { path: '/', domain: cookieDomain });
       return c.json({
         authenticated: false,
         user: null,
@@ -174,6 +182,7 @@ export function createAuthRoutes(config: AuthRoutesConfig) {
         sameSite: 'Lax',
         maxAge: cookieMaxAge,
         path: '/',
+        domain: cookieDomain,
       });
 
       // Redirect to frontend
@@ -187,7 +196,7 @@ export function createAuthRoutes(config: AuthRoutesConfig) {
    * POST /logout - Clear auth cookie
    */
   app.post('/logout', (c) => {
-    deleteCookie(c, 'auth_token', { path: '/' });
+    deleteCookie(c, 'auth_token', { path: '/', domain: cookieDomain });
     return c.json({ success: true });
   });
 

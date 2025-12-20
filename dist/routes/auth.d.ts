@@ -41,6 +41,12 @@ export interface AuthRoutesConfig {
      * Default: 7 days (604800 seconds)
      */
     cookieMaxAge?: number;
+    /**
+     * Cookie domain for cross-subdomain auth
+     * e.g., '.example.com' to share cookie across all subdomains
+     * IMPORTANT: Must match Hub's cookie domain for logout to work properly
+     */
+    cookieDomain?: string;
 }
 /**
  * Create auth routes that proxy to Hub
