@@ -149,4 +149,4 @@ All configuration is passed at runtime via factory functions. No secrets, creden
 
 ## License
 
-UNLICENSED - Private use only.
+MIT

@@ -54,6 +54,6 @@
     "url": "git+https://github.com/davidmanzanarez/codex-shared-libraries.git"
   },
   "author": "David Manzanarez",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "private": true
 }
