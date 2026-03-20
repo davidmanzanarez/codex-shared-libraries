@@ -1,13 +1,6 @@
 /**
  * Auth Routes Factory
  * Creates standard auth endpoints that proxy to Hub
- *
- * SECURITY NOTES:
- * - Token is received via query param from Hub (trusted internal redirect)
- * - Token is verified before setting cookie
- * - Algorithm hardcoded to HS256 (prevents algorithm confusion)
- * - Cookie is HttpOnly, Secure in production, SameSite=Lax
- * - Generic error messages to prevent information leakage
  */
 import { Hono } from 'hono';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
@@ -96,20 +89,22 @@ export function createAuthRoutes(config) {
         return c.redirect(`${hubAuthUrl}?returnTo=${encodeURIComponent(returnTo)}`);
     });
     /**
-     * GET /callback - Receive token from Hub and set local cookie
-     * Hub redirects here with ?token=<jwt> after successful OAuth
+     * GET /callback - Complete auth after Hub redirect
+     * Supports both cookie-based auth (shared domain) and token query param (legacy)
      */
     app.get('/callback', (c) => {
-        const token = c.req.query('token');
+        const tokenParam = c.req.query('token');
+        const existingCookie = getCookie(c, 'auth_token');
+        // Prefer cookie if already set (e.g. via shared domain from Hub)
+        const token = tokenParam || existingCookie;
         if (!token) {
             return c.redirect(`${frontendUrl}?error=no_token`);
         }
         try {
-            // SECURITY: Verify token before trusting it
             jwt.verify(token, jwtSecret, {
                 algorithms: ['HS256'],
             });
-            // Set HttpOnly cookie
+            // Set/refresh local cookie
             setCookie(c, 'auth_token', token, {
                 httpOnly: true,
                 secure: isProduction,
@@ -118,7 +113,6 @@ export function createAuthRoutes(config) {
                 path: '/',
                 domain: cookieDomain,
             });
-            // Redirect to frontend
             return c.redirect(frontendUrl);
         }
         catch {

@@ -1,13 +1,6 @@
 /**
  * Auth Routes Factory
  * Creates standard auth endpoints that proxy to Hub
- *
- * SECURITY NOTES:
- * - Token is received via query param from Hub (trusted internal redirect)
- * - Token is verified before setting cookie
- * - Algorithm hardcoded to HS256 (prevents algorithm confusion)
- * - Cookie is HttpOnly, Secure in production, SameSite=Lax
- * - Generic error messages to prevent information leakage
  */
 import { Hono } from 'hono';
 export interface AuthRoutesConfig {
