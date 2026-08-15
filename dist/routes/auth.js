@@ -89,14 +89,17 @@ export function createAuthRoutes(config) {
         return c.redirect(`${hubAuthUrl}?returnTo=${encodeURIComponent(returnTo)}`);
     });
     /**
-     * GET /callback - Complete auth after Hub redirect
-     * Supports both cookie-based auth (shared domain) and token query param (legacy)
+     * GET /callback - Complete auth after Hub redirect (cookie-based ONLY).
+     *
+     * SECURITY: This endpoint previously also accepted ?token=<JWT>. That put
+     * JWTs into edge/application logs (query strings are logged) and enabled
+     * login-CSRF (an attacker could sit a victim on the attacker's session).
+     * The Hub has set the shared-domain cookie directly since Mar 2026, so
+     * any token query param arriving here is now ignored — only the
+     * shared-domain cookie is trusted, and it is refreshed as a local cookie.
      */
     app.get('/callback', (c) => {
-        const tokenParam = c.req.query('token');
-        const existingCookie = getCookie(c, 'auth_token');
-        // Prefer cookie if already set (e.g. via shared domain from Hub)
-        const token = tokenParam || existingCookie;
+        const token = getCookie(c, 'auth_token');
         if (!token) {
             return c.redirect(`${frontendUrl}?error=no_token`);
         }
@@ -104,7 +107,7 @@ export function createAuthRoutes(config) {
             jwt.verify(token, jwtSecret, {
                 algorithms: ['HS256'],
             });
-            // Set/refresh local cookie
+            // Refresh local cookie
             setCookie(c, 'auth_token', token, {
                 httpOnly: true,
                 secure: isProduction,

@@ -37,6 +37,14 @@ export interface AuthMiddlewareConfig {
    * e.g., 'https://myapp.example.com' or 'http://localhost:3000'
    */
   frontendUrl: string;
+
+  /**
+   * If set, only this user id is admitted — any other valid JWT gets 403.
+   * Single-user services MUST set this: the Hub signs JWTs for every
+   * whitelisted account, and without an owner check a service trusts any
+   * suite JWT (defense in depth against Hub admission bugs).
+   */
+  ownerUserId?: string;
 }
 
 /**
@@ -78,7 +86,7 @@ export interface AuthMiddleware {
  * ```
  */
 export function createAuthMiddleware(config: AuthMiddlewareConfig): AuthMiddleware {
-  const { jwtSecret, hubPublicUrl, frontendUrl } = config;
+  const { jwtSecret, hubPublicUrl, frontendUrl, ownerUserId } = config;
 
   // Validate config at creation time (fail fast)
   if (!jwtSecret) {
@@ -115,6 +123,11 @@ export function createAuthMiddleware(config: AuthMiddlewareConfig): AuthMiddlewa
       const user = jwt.verify(token, jwtSecret, {
         algorithms: ['HS256'],
       }) as AuthUser;
+      // SECURITY: owner admission — a valid suite JWT is not enough for a
+      // single-user service; the token must belong to the configured owner.
+      if (ownerUserId && user.id !== ownerUserId) {
+        return c.json({ error: 'Forbidden' }, 403);
+      }
       c.set('user', user);
       await next();
     } catch {
@@ -139,7 +152,11 @@ export function createAuthMiddleware(config: AuthMiddlewareConfig): AuthMiddlewa
         const user = jwt.verify(token, jwtSecret, {
           algorithms: ['HS256'],
         }) as AuthUser;
-        c.set('user', user);
+        // Same owner admission rule as requireAuth: a non-owner token is
+        // treated as anonymous rather than authenticated.
+        if (!ownerUserId || user.id === ownerUserId) {
+          c.set('user', user);
+        }
       } catch {
         // Invalid token, continue without user (don't block)
       }

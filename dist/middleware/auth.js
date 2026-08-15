@@ -15,7 +15,7 @@ import jwt from 'jsonwebtoken';
  * ```
  */
 export function createAuthMiddleware(config) {
-    const { jwtSecret, hubPublicUrl, frontendUrl } = config;
+    const { jwtSecret, hubPublicUrl, frontendUrl, ownerUserId } = config;
     // Validate config at creation time (fail fast)
     if (!jwtSecret) {
         throw new Error('AuthMiddleware: jwtSecret is required');
@@ -47,6 +47,11 @@ export function createAuthMiddleware(config) {
             const user = jwt.verify(token, jwtSecret, {
                 algorithms: ['HS256'],
             });
+            // SECURITY: owner admission — a valid suite JWT is not enough for a
+            // single-user service; the token must belong to the configured owner.
+            if (ownerUserId && user.id !== ownerUserId) {
+                return c.json({ error: 'Forbidden' }, 403);
+            }
             c.set('user', user);
             await next();
         }
@@ -70,7 +75,11 @@ export function createAuthMiddleware(config) {
                 const user = jwt.verify(token, jwtSecret, {
                     algorithms: ['HS256'],
                 });
-                c.set('user', user);
+                // Same owner admission rule as requireAuth: a non-owner token is
+                // treated as anonymous rather than authenticated.
+                if (!ownerUserId || user.id === ownerUserId) {
+                    c.set('user', user);
+                }
             }
             catch {
                 // Invalid token, continue without user (don't block)

@@ -19,13 +19,13 @@ const isDev = process.env.NODE_ENV !== 'production';
  * typically append the real client IP. An attacker could prepend fake IPs,
  * but the proxy adds the real one at the end.
  *
- * Header priority: CF-Connecting-IP > X-Forwarded-For (last) > X-Real-IP
+ * Header priority: X-Forwarded-For (last) > X-Real-IP
+ *
+ * CF-Connecting-IP is deliberately NOT trusted: the suite is not behind
+ * Cloudflare, so that header is fully attacker-controlled and allowed
+ * rate-limit buckets to be spoofed per request.
  */
 export function getClientIP(c) {
-    // Cloudflare (trusted, single value)
-    const cfConnectingIP = c.req.header('cf-connecting-ip');
-    if (cfConnectingIP)
-        return cfConnectingIP;
     // Reverse proxy - take LAST IP (proxy appends real client IP)
     const forwarded = c.req.header('x-forwarded-for');
     if (forwarded) {

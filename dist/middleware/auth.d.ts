@@ -32,6 +32,13 @@ export interface AuthMiddlewareConfig {
      * e.g., 'https://myapp.example.com' or 'http://localhost:3000'
      */
     frontendUrl: string;
+    /**
+     * If set, only this user id is admitted — any other valid JWT gets 403.
+     * Single-user services MUST set this: the Hub signs JWTs for every
+     * whitelisted account, and without an owner check a service trusts any
+     * suite JWT (defense in depth against Hub admission bugs).
+     */
+    ownerUserId?: string;
 }
 /**
  * Return type from createAuthMiddleware factory

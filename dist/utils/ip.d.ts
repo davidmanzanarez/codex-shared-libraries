@@ -6,7 +6,11 @@ import type { Context } from 'hono';
  * typically append the real client IP. An attacker could prepend fake IPs,
  * but the proxy adds the real one at the end.
  *
- * Header priority: CF-Connecting-IP > X-Forwarded-For (last) > X-Real-IP
+ * Header priority: X-Forwarded-For (last) > X-Real-IP
+ *
+ * CF-Connecting-IP is deliberately NOT trusted: the suite is not behind
+ * Cloudflare, so that header is fully attacker-controlled and allowed
+ * rate-limit buckets to be spoofed per request.
  */
 export declare function getClientIP(c: Context): string;
 /**
