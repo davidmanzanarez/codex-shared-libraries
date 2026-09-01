@@ -47,6 +47,12 @@ export function createAuthMiddleware(config) {
             const user = jwt.verify(token, jwtSecret, {
                 algorithms: ['HS256'],
             });
+            // SECURITY: agent tokens (token_use: 'agent') are never valid as a user
+            // session — they authenticate only via createAgentAuthMiddleware on the
+            // routes scoped to them. Each token type opens exactly one kind of door.
+            if (user.token_use === 'agent') {
+                return c.json({ error: 'Forbidden' }, 403);
+            }
             // SECURITY: owner admission — a valid suite JWT is not enough for a
             // single-user service; the token must belong to the configured owner.
             if (ownerUserId && user.id !== ownerUserId) {
@@ -75,9 +81,9 @@ export function createAuthMiddleware(config) {
                 const user = jwt.verify(token, jwtSecret, {
                     algorithms: ['HS256'],
                 });
-                // Same owner admission rule as requireAuth: a non-owner token is
+                // Same rules as requireAuth: agent tokens and non-owner tokens are
                 // treated as anonymous rather than authenticated.
-                if (!ownerUserId || user.id === ownerUserId) {
+                if (user.token_use !== 'agent' && (!ownerUserId || user.id === ownerUserId)) {
                     c.set('user', user);
                 }
             }
