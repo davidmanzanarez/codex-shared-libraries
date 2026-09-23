@@ -36,7 +36,9 @@
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "pretest": "npm run build",
+    "test": "node --test test/"
   },
   "peerDependencies": {
     "hono": "^4.0.0",
