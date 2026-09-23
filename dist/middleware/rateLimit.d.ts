@@ -23,14 +23,19 @@ export interface RateLimitOptions {
     /** Skip rate limiting for certain requests */
     skip?: (c: Context) => boolean;
 }
-interface RateLimitEntry {
+export interface RateLimitEntry {
+    /** Request timestamps (ms) inside the current window, oldest first */
     timestamps: number[];
+    /** Window size (ms) of the config that last touched this entry */
+    windowMs: number;
 }
+/** In-memory store shared by every rateLimiter() mounted on one service */
+export type RateLimitStore = Map<string, RateLimitEntry>;
 /**
  * Create a rate limit store
  * Each service should create its own store instance
  */
-export declare function createRateLimitStore(): Map<string, RateLimitEntry>;
+export declare function createRateLimitStore(): RateLimitStore;
 /**
  * Create rate limiter middleware
  *
@@ -49,7 +54,7 @@ export declare function createRateLimitStore(): Map<string, RateLimitEntry>;
  *   }
  * }));
  */
-export declare function rateLimiter(store: Map<string, RateLimitEntry>, options: RateLimitOptions): (c: Context, next: Next) => Promise<void | (Response & import("hono").TypedResponse<{
+export declare function rateLimiter(store: RateLimitStore, options: RateLimitOptions): (c: Context, next: Next) => Promise<void | (Response & import("hono").TypedResponse<{
     error: string;
     retryAfter: number;
 }, 429, "json">)>;
@@ -61,5 +66,4 @@ export declare function createSimpleRateLimiter(config: RateLimitConfig): (c: Co
     error: string;
     retryAfter: number;
 }, 429, "json">)>;
-export {};
 //# sourceMappingURL=rateLimit.d.ts.map

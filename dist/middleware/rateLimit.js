@@ -1,4 +1,6 @@
 import { getClientIP } from '../utils/ip.js';
+/** Window assumed for entries that predate windowMs tracking */
+const DEFAULT_CLEANUP_WINDOW_MS = 5 * 60 * 1000;
 /**
  * Create a rate limit store
  * Each service should create its own store instance
@@ -9,8 +11,11 @@ export function createRateLimitStore() {
     const cleanup = setInterval(() => {
         const now = Date.now();
         for (const [key, entry] of store.entries()) {
-            // Remove timestamps older than 5 minutes
-            entry.timestamps = entry.timestamps.filter(t => now - t < 5 * 60 * 1000);
+            // Drop timestamps outside the entry's own window. A fixed 5-minute
+            // sweep used to silently under-count any limit configured with a
+            // longer window (e.g. 10 imports per hour).
+            const windowMs = entry.windowMs || DEFAULT_CLEANUP_WINDOW_MS;
+            entry.timestamps = entry.timestamps.filter(t => now - t < windowMs);
             if (entry.timestamps.length === 0) {
                 store.delete(key);
             }
@@ -77,14 +82,17 @@ export function rateLimiter(store, options) {
         // Get or create entry
         let entry = store.get(key);
         if (!entry) {
-            entry = { timestamps: [] };
+            entry = { timestamps: [], windowMs };
             store.set(key, entry);
         }
+        entry.windowMs = windowMs;
         // Remove timestamps outside the window
         entry.timestamps = entry.timestamps.filter(t => now - t < windowMs);
         // Check if over limit
         if (entry.timestamps.length >= config.limit) {
-            const oldestInWindow = Math.min(...entry.timestamps);
+            // Timestamps are appended in order, so the first one is the oldest.
+            // (Math.min(...arr) would also overflow the call stack on large limits.)
+            const oldestInWindow = entry.timestamps[0];
             const resetIn = Math.ceil((oldestInWindow + windowMs - now) / 1000);
             c.header('X-RateLimit-Limit', config.limit.toString());
             c.header('X-RateLimit-Remaining', '0');
