@@ -35,11 +35,13 @@ export declare function normalizeIP(ip: string): string;
  */
 export declare function getClientIP(c: Context, options?: ClientIPOptions): string;
 /**
- * Check if request is from internal Docker network
+ * Check if request is from the internal (private) network
  *
- * SECURITY: Only trusts actual Docker network IPs (172.x.x.x) or localhost.
+ * SECURITY: Only RFC 1918 ranges and loopback qualify; the previous
+ * 172.x.x.x wildcard also matched public 172.0-15 and 172.32-255 space.
  * In dev mode, 'unknown' IPs are treated as internal for convenience.
  * Empty strings are never internal (fail-safe for production).
+ * This classifies traffic for metrics; it is not an authorization check.
  */
 export declare function isInternalRequest(ip: string): boolean;
 //# sourceMappingURL=ip.d.ts.map

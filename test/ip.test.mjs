@@ -65,3 +65,18 @@ test('IPv4-mapped IPv6 addresses are normalized everywhere', async () => {
   assert.equal(isInternalRequest('::ffff:172.18.0.5'), true);
   assert.equal(isInternalRequest('::ffff:203.0.113.9'), false);
 });
+
+test('only RFC 1918 space is internal: 172.16-31 yes, 172.0-15 and 172.32+ no', () => {
+  assert.equal(isInternalRequest('172.16.0.1'), true);
+  assert.equal(isInternalRequest('172.31.255.254'), true);
+  assert.equal(isInternalRequest('172.15.1.1'), false);
+  assert.equal(isInternalRequest('172.32.1.1'), false);
+  assert.equal(isInternalRequest('10.0.0.9'), true);
+  assert.equal(isInternalRequest('192.168.1.20'), true);
+  assert.equal(isInternalRequest('192.169.1.20'), false);
+  assert.equal(isInternalRequest('127.0.0.2'), true);
+  assert.equal(isInternalRequest('::ffff:172.32.1.1'), false);
+  assert.equal(isInternalRequest('::ffff:172.18.0.5'), true);
+  assert.equal(isInternalRequest('172.18.0.999'), false);
+  assert.equal(isInternalRequest('172.18.0'), false);
+});

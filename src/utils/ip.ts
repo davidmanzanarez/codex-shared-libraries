@@ -1,15 +1,22 @@
 import type { Context } from 'hono';
 
 /**
- * Internal Docker network IP patterns
- * 172.x.x.x are Docker bridge networks
+ * Private (RFC 1918) IPv4 ranges plus loopback. Docker allocates its bridge
+ * and user-defined networks from these, so an address in them means the
+ * request originated inside the private network rather than at the edge.
+ * Only 172.16.0.0/12 is private; 172.0-15.x and 172.32-255.x are public.
  */
-const INTERNAL_IP_PATTERNS = [
-  /^172\.\d+\.\d+\.\d+$/,
-  /^127\.0\.0\.1$/,
-  /^localhost$/,
-  /^::1$/,
-];
+function isPrivateIPv4(ip: string): boolean {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(ip);
+  if (!m) return false;
+  const [a, b, c, d] = m.slice(1).map(Number);
+  if ([a, b, c, d].some(n => n > 255)) return false;
+  if (a === 10) return true;                       // 10.0.0.0/8
+  if (a === 172 && b >= 16 && b <= 31) return true; // 172.16.0.0/12
+  if (a === 192 && b === 168) return true;         // 192.168.0.0/16
+  if (a === 127) return true;                      // 127.0.0.0/8
+  return false;
+}
 
 /**
  * Check if we're in development mode (no reverse proxy)
@@ -75,11 +82,13 @@ export function getClientIP(c: Context, options?: ClientIPOptions): string {
 }
 
 /**
- * Check if request is from internal Docker network
+ * Check if request is from the internal (private) network
  *
- * SECURITY: Only trusts actual Docker network IPs (172.x.x.x) or localhost.
+ * SECURITY: Only RFC 1918 ranges and loopback qualify; the previous
+ * 172.x.x.x wildcard also matched public 172.0-15 and 172.32-255 space.
  * In dev mode, 'unknown' IPs are treated as internal for convenience.
  * Empty strings are never internal (fail-safe for production).
+ * This classifies traffic for metrics; it is not an authorization check.
  */
 export function isInternalRequest(ip: string): boolean {
   // Empty IP is never internal (fail-safe)
@@ -89,5 +98,5 @@ export function isInternalRequest(ip: string): boolean {
   if (isDev && ip === 'unknown') return true;
 
   const normalized = normalizeIP(ip);
-  return INTERNAL_IP_PATTERNS.some(pattern => pattern.test(normalized));
+  return normalized === '::1' || normalized === 'localhost' || isPrivateIPv4(normalized);
 }
