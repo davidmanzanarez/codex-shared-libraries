@@ -45,9 +45,9 @@
     "test": "node --test test/"
   },
   "peerDependencies": {
+    "@hono/node-server": ">=1.11.0",
     "hono": "^4.0.0",
-    "jsonwebtoken": "^9.0.0",
-    "@hono/node-server": ">=1.11.0"
+    "jsonwebtoken": "^9.0.0"
   },
   "peerDependenciesMeta": {
     "@hono/node-server": {
@@ -56,11 +56,11 @@
   },
   "devDependencies": {
     "@hono/node-server": "^1.19.17",
-    "@types/jsonwebtoken": "^9.0.7",
-    "@types/node": "^22.10.1",
-    "hono": "^4.6.12",
-    "jsonwebtoken": "^9.0.2",
-    "typescript": "^5.7.2"
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22.20.4",
+    "hono": "^4.13.8",
+    "jsonwebtoken": "^9.0.3",
+    "typescript": "^5.9.3"
   },
   "repository": {
     "type": "git",
