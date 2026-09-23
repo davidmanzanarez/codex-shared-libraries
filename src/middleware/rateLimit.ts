@@ -23,6 +23,11 @@ export interface RateLimitOptions {
   endpoints?: Record<string, RateLimitConfig>;
   /** Custom key generator (default: IP + path prefix) */
   keyGenerator?: (c: Context) => string;
+  /**
+   * Client-IP resolver for the default key (default: getClientIP from proxy
+   * headers). Ignored when keyGenerator is set.
+   */
+  resolveIP?: (c: Context) => string;
   /** Skip rate limiting for certain requests */
   skip?: (c: Context) => boolean;
 }
@@ -88,8 +93,8 @@ function getConfigForPath(path: string, options: RateLimitOptions): RateLimitCon
 /**
  * Default key generator: IP + path prefix (first 3 segments)
  */
-function defaultKeyGenerator(c: Context): string {
-  const ip = getClientIP(c);
+function defaultKeyGenerator(c: Context, resolveIP: (c: Context) => string): string {
+  const ip = resolveIP(c);
   const path = c.req.path;
   const pathPrefix = path.split('/').slice(0, 3).join('/');
   return `${ip}:${pathPrefix}`;
@@ -117,7 +122,8 @@ export function rateLimiter(
   store: RateLimitStore,
   options: RateLimitOptions
 ) {
-  const keyGenerator = options.keyGenerator ?? defaultKeyGenerator;
+  const resolveIP = options.resolveIP ?? getClientIP;
+  const keyGenerator = options.keyGenerator ?? ((c: Context) => defaultKeyGenerator(c, resolveIP));
 
   return async (c: Context, next: Next) => {
     // Check if we should skip rate limiting

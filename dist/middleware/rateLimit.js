@@ -43,8 +43,8 @@ function getConfigForPath(path, options) {
 /**
  * Default key generator: IP + path prefix (first 3 segments)
  */
-function defaultKeyGenerator(c) {
-    const ip = getClientIP(c);
+function defaultKeyGenerator(c, resolveIP) {
+    const ip = resolveIP(c);
     const path = c.req.path;
     const pathPrefix = path.split('/').slice(0, 3).join('/');
     return `${ip}:${pathPrefix}`;
@@ -68,7 +68,8 @@ function defaultKeyGenerator(c) {
  * }));
  */
 export function rateLimiter(store, options) {
-    const keyGenerator = options.keyGenerator ?? defaultKeyGenerator;
+    const resolveIP = options.resolveIP ?? getClientIP;
+    const keyGenerator = options.keyGenerator ?? ((c) => defaultKeyGenerator(c, resolveIP));
     return async (c, next) => {
         // Check if we should skip rate limiting
         if (options.skip?.(c)) {

@@ -20,6 +20,11 @@ export interface RateLimitOptions {
     endpoints?: Record<string, RateLimitConfig>;
     /** Custom key generator (default: IP + path prefix) */
     keyGenerator?: (c: Context) => string;
+    /**
+     * Client-IP resolver for the default key (default: getClientIP from proxy
+     * headers). Ignored when keyGenerator is set.
+     */
+    resolveIP?: (c: Context) => string;
     /** Skip rate limiting for certain requests */
     skip?: (c: Context) => boolean;
 }

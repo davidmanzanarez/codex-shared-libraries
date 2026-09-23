@@ -23,6 +23,18 @@ export interface MetricsLoggerOptions {
      * If not provided, userId will be undefined
      */
     getUserId?: (c: Context) => string | undefined;
+    /**
+     * Custom client-IP resolver (default: getClientIP from proxy headers).
+     * Pass e.g. `(c) => getClientIP(c, { socketAddress: nodeSocketAddress })`
+     * so proxy-less internal calls are classified as internal.
+     */
+    resolveIP?: (c: Context) => string;
+    /**
+     * Requests to leave out of the store entirely. Typical use: health checks
+     * and the metrics endpoints themselves, which would otherwise inflate the
+     * very numbers they report.
+     */
+    skip?: (c: Context) => boolean;
 }
 /**
  * Create metrics logger middleware

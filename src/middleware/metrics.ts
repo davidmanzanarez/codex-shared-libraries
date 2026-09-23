@@ -12,6 +12,8 @@ const BOT_PATTERNS = [
   /googlebot|bingbot|slurp|duckduckbot|baiduspider/i,
   /facebookexternalhit|twitterbot|linkedinbot/i,
   /semrush|ahrefs|moz|dotbot/i,
+  // Programmatic clients: not humans, whatever network they came from
+  /^(node|undici|curl|wget|python-requests|go-http-client|okhttp)\b/i,
 ];
 
 // Suspicious path patterns (common attack vectors)
@@ -96,7 +98,8 @@ function updateAggregatedStats(store: MetricsStore, metric: RequestMetric) {
       (stats.requestsByPath[pathKey] || 0) + 1;
   }
 
-  if (!metric.isInternal) {
+  // An unresolved IP ('') is not an address; never let it become a key.
+  if (!metric.isInternal && metric.ip) {
     if (Object.keys(stats.requestsByIP).length < 100 || stats.requestsByIP[metric.ip]) {
       stats.requestsByIP[metric.ip] =
         (stats.requestsByIP[metric.ip] || 0) + 1;
@@ -122,20 +125,36 @@ export interface MetricsLoggerOptions {
    * If not provided, userId will be undefined
    */
   getUserId?: (c: Context) => string | undefined;
+  /**
+   * Custom client-IP resolver (default: getClientIP from proxy headers).
+   * Pass e.g. `(c) => getClientIP(c, { socketAddress: nodeSocketAddress })`
+   * so proxy-less internal calls are classified as internal.
+   */
+  resolveIP?: (c: Context) => string;
+  /**
+   * Requests to leave out of the store entirely. Typical use: health checks
+   * and the metrics endpoints themselves, which would otherwise inflate the
+   * very numbers they report.
+   */
+  skip?: (c: Context) => boolean;
 }
 
 /**
  * Create metrics logger middleware
  */
 export function metricsLogger(serviceName: string, options: MetricsLoggerOptions) {
-  const { store, getUserId } = options;
+  const { store, getUserId, resolveIP = getClientIP, skip } = options;
 
   return async (c: Context, next: Next) => {
+    if (skip?.(c)) {
+      return next();
+    }
+
     const start = Date.now();
     const path = c.req.path;
     const method = c.req.method;
     const userAgent = c.req.header('user-agent') || '';
-    const ip = getClientIP(c);
+    const ip = resolveIP(c);
 
     await next();
 

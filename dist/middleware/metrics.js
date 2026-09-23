@@ -5,6 +5,8 @@ const BOT_PATTERNS = [
     /googlebot|bingbot|slurp|duckduckbot|baiduspider/i,
     /facebookexternalhit|twitterbot|linkedinbot/i,
     /semrush|ahrefs|moz|dotbot/i,
+    // Programmatic clients: not humans, whatever network they came from
+    /^(node|undici|curl|wget|python-requests|go-http-client|okhttp)\b/i,
 ];
 // Suspicious path patterns (common attack vectors)
 const SUSPICIOUS_PATTERNS = [
@@ -74,7 +76,8 @@ function updateAggregatedStats(store, metric) {
         stats.requestsByPath[pathKey] =
             (stats.requestsByPath[pathKey] || 0) + 1;
     }
-    if (!metric.isInternal) {
+    // An unresolved IP ('') is not an address; never let it become a key.
+    if (!metric.isInternal && metric.ip) {
         if (Object.keys(stats.requestsByIP).length < 100 || stats.requestsByIP[metric.ip]) {
             stats.requestsByIP[metric.ip] =
                 (stats.requestsByIP[metric.ip] || 0) + 1;
@@ -95,13 +98,16 @@ function updateAggregatedStats(store, metric) {
  * Create metrics logger middleware
  */
 export function metricsLogger(serviceName, options) {
-    const { store, getUserId } = options;
+    const { store, getUserId, resolveIP = getClientIP, skip } = options;
     return async (c, next) => {
+        if (skip?.(c)) {
+            return next();
+        }
         const start = Date.now();
         const path = c.req.path;
         const method = c.req.method;
         const userAgent = c.req.header('user-agent') || '';
-        const ip = getClientIP(c);
+        const ip = resolveIP(c);
         await next();
         const duration = Date.now() - start;
         const status = c.res.status;
