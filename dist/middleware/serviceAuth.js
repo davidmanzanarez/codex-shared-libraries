@@ -12,7 +12,7 @@ import { safeEqual } from '../utils/secrets.js';
  * ```
  */
 export function createServiceAuthMiddleware(config) {
-    const { secret, secretHeader = 'X-Hub-Secret', userIdHeader = 'X-User-Id', requireUserId = true, } = config;
+    const { secret, secretHeader = 'X-Hub-Secret', userIdHeader = 'X-User-Id', requireUserId = true, contextKey = 'serviceUserId', } = config;
     if (!secret) {
         throw new Error('ServiceAuthMiddleware: secret is required');
     }
@@ -25,11 +25,11 @@ export function createServiceAuthMiddleware(config) {
         if (requireUserId && !userId) {
             return c.json({ error: `${userIdHeader} header required` }, 400);
         }
-        c.set('serviceUserId', userId ?? null);
+        c.set(contextKey, userId ?? null);
         await next();
     };
     const getServiceUserId = (c) => {
-        return c.get('serviceUserId') ?? null;
+        return c.get(contextKey) ?? null;
     };
     return { requireServiceAuth, getServiceUserId };
 }

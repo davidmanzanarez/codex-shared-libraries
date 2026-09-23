@@ -30,6 +30,12 @@ export interface ServiceAuthMiddlewareConfig {
      * Set false only for endpoints that are genuinely user-agnostic.
      */
     requireUserId?: boolean;
+    /**
+     * Context key the scoped user id is stored under. Default: 'serviceUserId'.
+     * Set it to whatever your existing handlers already read (e.g. 'userId')
+     * when replacing an inline guard, so the swap needs no handler edits.
+     */
+    contextKey?: string;
 }
 export interface ServiceAuthMiddleware {
     /** Middleware that requires the shared secret (401) and, by default, a user id (400). */

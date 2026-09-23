@@ -63,3 +63,12 @@ test('safeEqual: equal strings true; different, empty, or missing false', () => 
   assert.equal(safeEqual(undefined, 'abc'), false);
   assert.equal(safeEqual('abc', null), false);
 });
+
+test('contextKey lets the id land where existing handlers already read it', async () => {
+  const { requireServiceAuth, getServiceUserId } = createServiceAuthMiddleware({ secret: SECRET, contextKey: 'userId' });
+  const app = new Hono();
+  app.use('/api/internal/*', requireServiceAuth);
+  app.get('/api/internal/x', (c) => c.json({ legacy: c.get('userId'), viaGetter: getServiceUserId(c) }));
+  const res = await app.request('/api/internal/x', { headers: { 'x-hub-secret': SECRET, 'x-user-id': 'u7' } });
+  assert.deepEqual(await res.json(), { legacy: 'u7', viaGetter: 'u7' });
+});

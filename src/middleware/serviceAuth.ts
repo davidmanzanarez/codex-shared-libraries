@@ -32,6 +32,12 @@ export interface ServiceAuthMiddlewareConfig {
    * Set false only for endpoints that are genuinely user-agnostic.
    */
   requireUserId?: boolean;
+  /**
+   * Context key the scoped user id is stored under. Default: 'serviceUserId'.
+   * Set it to whatever your existing handlers already read (e.g. 'userId')
+   * when replacing an inline guard, so the swap needs no handler edits.
+   */
+  contextKey?: string;
 }
 
 export interface ServiceAuthMiddleware {
@@ -59,6 +65,7 @@ export function createServiceAuthMiddleware(config: ServiceAuthMiddlewareConfig)
     secretHeader = 'X-Hub-Secret',
     userIdHeader = 'X-User-Id',
     requireUserId = true,
+    contextKey = 'serviceUserId',
   } = config;
 
   if (!secret) {
@@ -76,12 +83,12 @@ export function createServiceAuthMiddleware(config: ServiceAuthMiddlewareConfig)
       return c.json({ error: `${userIdHeader} header required` }, 400);
     }
 
-    c.set('serviceUserId', userId ?? null);
+    c.set(contextKey, userId ?? null);
     await next();
   };
 
   const getServiceUserId = (c: Context): string | null => {
-    return c.get('serviceUserId') ?? null;
+    return c.get(contextKey) ?? null;
   };
 
   return { requireServiceAuth, getServiceUserId };
