@@ -138,8 +138,11 @@ the claims include `jti` and `grant_id` for audit trails.
 Shared-secret middleware for calls between services on the private network.
 Compares `X-Hub-Secret` in constant time (401 on missing or wrong, same
 body for both) and requires `X-User-Id` (400 without it) so internal
-endpoints stay scoped to one user. Header names and the user-id requirement
-are configurable. Returns `{ requireServiceAuth, getServiceUserId }`.
+endpoints stay scoped to one user. Header names, the user-id requirement
+and the context key the id is stored under (`contextKey`, default
+`serviceUserId`; set it to whatever your handlers already read when
+replacing an inline guard) are configurable. Returns
+`{ requireServiceAuth, getServiceUserId }`.
 
 ### `rateLimiter(store, options)`
 
@@ -183,7 +186,7 @@ over a metrics store. Takes the service's `requireAuth`, `getUser` and
   `X-Real-IP`, then the socket address if a resolver is given, else `''`
   in production. `CF-Connecting-IP` is never trusted. IPv4-mapped IPv6
   addresses are normalized.
-- `isInternalRequest(ip)`: docker bridge (`172.x`), loopback, `::1`.
+- `isInternalRequest(ip)`: RFC 1918 space (`10/8`, `172.16/12`, `192.168/16`), loopback, `::1`. Classifies traffic for metrics; not an authorization check.
 - `normalizeIP(ip)`: strips the `::ffff:` prefix.
 - `safeEqual(a, b)`: constant-time string comparison for secrets.
 
@@ -225,9 +228,13 @@ npm run typecheck
 npm test          # builds dist/ then runs node --test against it
 ```
 
-Tests need no server: they drive Hono apps through `app.request()`. CI runs
-the same on Node 18, 20 and 22 and fails if `dist/` is out of date with
-`src/`, because consumers load the committed build. Rebuild and commit
+Tests need no server: they drive Hono apps through `app.request()`.
+`npm run typecheck:compat` type-checks `test/types/consumer.ts`, code
+written the way earlier consumers wrote it, against the committed
+declarations, so a declaration-level break fails even when every runtime
+test passes. CI runs all of this on Node 18, 20 and 22 and fails if
+`dist/` is out of date with `src/` (including a never-committed new
+file), because consumers load the committed build. Rebuild and commit
 `dist/` with every source change.
 
 ## Security

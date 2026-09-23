@@ -81,6 +81,7 @@ all of them except `node/`, which is reached only via its subpath.
 ```bash
 npm install
 npm run typecheck
+npm run typecheck:compat   # 0.1.0-shaped consumer code vs the committed declarations
 npm test            # pretest builds dist/, then node --test test/*.test.mjs
 npm run dev         # tsc --watch
 ```
@@ -103,6 +104,9 @@ secret.
 4. Keep the public API backward compatible. Consumers pin a commit, and
    any of them may bump at any time; an unrelated bump must never break a
    build. New behavior goes behind a new option with the old default.
+   Adding a required field to an exported interface is a break (0.2.0 did
+   it once); `typecheck:compat` exists to catch that, extend the fixture
+   when you add API.
 5. Nothing in a commit message, comment, test or example may name a real
    host, secret, user id or production value. Use `example.com`.
 6. Update README.md and CHANGELOG.md in the same change.
