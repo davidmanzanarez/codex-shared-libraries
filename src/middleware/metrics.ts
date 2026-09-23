@@ -11,7 +11,7 @@ const BOT_PATTERNS = [
   /bot|crawler|spider|scraper/i,
   /googlebot|bingbot|slurp|duckduckbot|baiduspider/i,
   /facebookexternalhit|twitterbot|linkedinbot/i,
-  /semrush|ahrefs|moz|dotbot/i,
+  /semrush|ahrefs|rogerbot|dotbot/i,
   // Programmatic clients: not humans, whatever network they came from
   /^(node|undici|curl|wget|python-requests|go-http-client|okhttp)\b/i,
 ];
