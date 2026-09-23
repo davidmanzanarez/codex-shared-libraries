@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build and test
+        run: npm test
+
+      # Consumers install this package from git and load the committed dist/.
+      # A source change that ships without its rebuilt output would silently
+      # run stale code in every consumer, so the build must be a no-op here.
+      - name: Committed dist matches source
+        if: matrix.node == 20
+        run: |
+          git status --porcelain dist/
+          git diff --exit-code --stat dist/
