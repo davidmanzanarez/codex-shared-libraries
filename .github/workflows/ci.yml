@@ -28,6 +28,9 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      - name: Consumer type compatibility
+        run: npm run typecheck:compat
+
       - name: Build and test
         run: npm test
 
@@ -37,5 +40,11 @@ jobs:
       - name: Committed dist matches source
         if: matrix.node == 20
         run: |
-          git status --porcelain dist/
-          git diff --exit-code --stat dist/
+          # --untracked-files=all: a brand-new compiled file that was never
+          # committed must fail too; git diff alone ignores untracked paths.
+          drift=$(git status --porcelain --untracked-files=all -- dist/)
+          if [ -n "$drift" ]; then
+            echo "dist/ is out of date with src/ (rebuild and commit):"
+            echo "$drift"
+            exit 1
+          fi
