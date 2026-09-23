@@ -47,3 +47,21 @@ test('isInternalRequest: docker bridge and loopback are internal, public and emp
   assert.equal(isInternalRequest('203.0.113.9'), false);
   assert.equal(isInternalRequest(''), false);
 });
+
+test('socketAddress fallback is used only when no proxy header is present', async () => {
+  const app = new Hono();
+  app.get('/ip', (c) => c.text(getClientIP(c, { socketAddress: () => '172.18.0.5' })));
+  assert.equal(await (await app.request('/ip')).text(), '172.18.0.5');
+  assert.equal(
+    await (await app.request('/ip', { headers: { 'x-forwarded-for': '203.0.113.9' } })).text(),
+    '203.0.113.9',
+  );
+});
+
+test('IPv4-mapped IPv6 addresses are normalized everywhere', async () => {
+  const app = new Hono();
+  app.get('/ip', (c) => c.text(getClientIP(c, { socketAddress: () => '::ffff:172.18.0.5' })));
+  assert.equal(await (await app.request('/ip')).text(), '172.18.0.5');
+  assert.equal(isInternalRequest('::ffff:172.18.0.5'), true);
+  assert.equal(isInternalRequest('::ffff:203.0.113.9'), false);
+});
