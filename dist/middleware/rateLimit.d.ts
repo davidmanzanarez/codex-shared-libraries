@@ -31,8 +31,12 @@ export interface RateLimitOptions {
 export interface RateLimitEntry {
     /** Request timestamps (ms) inside the current window, oldest first */
     timestamps: number[];
-    /** Window size (ms) of the config that last touched this entry */
-    windowMs: number;
+    /**
+     * Window size (ms) of the config that last touched this entry.
+     * Optional so entries created before this field existed (or by hand)
+     * still type-check; cleanup falls back to a five-minute window.
+     */
+    windowMs?: number;
 }
 /** In-memory store shared by every rateLimiter() mounted on one service */
 export type RateLimitStore = Map<string, RateLimitEntry>;
