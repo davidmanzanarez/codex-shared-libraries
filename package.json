@@ -25,6 +25,10 @@
     "./routes": {
       "import": "./dist/routes/index.js",
       "types": "./dist/routes/index.d.ts"
+    },
+    "./node": {
+      "import": "./dist/node/index.js",
+      "types": "./dist/node/index.d.ts"
     }
   },
   "files": [
@@ -42,9 +46,16 @@
   },
   "peerDependencies": {
     "hono": "^4.0.0",
-    "jsonwebtoken": "^9.0.0"
+    "jsonwebtoken": "^9.0.0",
+    "@hono/node-server": ">=1.11.0"
+  },
+  "peerDependenciesMeta": {
+    "@hono/node-server": {
+      "optional": true
+    }
   },
   "devDependencies": {
+    "@hono/node-server": "^1.19.17",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.10.1",
     "hono": "^4.6.12",
