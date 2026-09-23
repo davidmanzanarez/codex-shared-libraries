@@ -15,7 +15,12 @@ export interface HubSummaryResponse {
   lastUpdated: string;
   status: 'healthy' | 'stale' | 'error' | 'offline';
   metrics: {
-    primary: { label: string; value: string | number };
+    primary: {
+      label: string;
+      value: string | number;
+      /** Direction of the primary metric since the previous summary */
+      trend?: 'up' | 'down' | 'stable';
+    };
     secondary?: Array<{ label: string; value: string | number }>;
   };
   objectiveProgress?: number;

@@ -17,6 +17,8 @@ export interface HubSummaryResponse {
         primary: {
             label: string;
             value: string | number;
+            /** Direction of the primary metric since the previous summary */
+            trend?: 'up' | 'down' | 'stable';
         };
         secondary?: Array<{
             label: string;
