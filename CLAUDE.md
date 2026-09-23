@@ -81,7 +81,7 @@ all of them except `node/`, which is reached only via its subpath.
 ```bash
 npm install
 npm run typecheck
-npm test            # pretest builds dist/, then node --test test/
+npm test            # pretest builds dist/, then node --test test/*.test.mjs
 npm run dev         # tsc --watch
 ```
 
