@@ -5,6 +5,8 @@
 import { Hono } from 'hono';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import jwt from 'jsonwebtoken';
+export const DEFAULT_REFRESH_COOKIE_NAME = 'ddk_refresh';
+export const DEFAULT_REFRESH_MAX_AGE = 60 * 60 * 24 * 365; // 365 days
 /**
  * Create auth routes that proxy to Hub
  *
@@ -15,6 +17,8 @@ import jwt from 'jsonwebtoken';
  * const authRoutes = createAuthRoutes({
  *   jwtSecret: env.jwtSecret,
  *   hubPublicUrl: env.hubPublicUrl,
+ *   hubInternalUrl: env.hubUrl,
+ *   hubSecret: env.hubSecret,
  *   selfUrl: env.selfUrl,
  *   frontendUrl: env.frontendUrl,
  * });
@@ -23,14 +27,15 @@ import jwt from 'jsonwebtoken';
  * ```
  *
  * This creates:
- * - GET /api/auth/me - Check if user is authenticated
+ * - GET /api/auth/me - Check if user is authenticated (auto-refreshes via Hub if configured)
+ * - POST /api/auth/refresh - Exchange refresh cookie for fresh access + rotated refresh cookies
  * - GET /api/auth/login - Redirect to Hub login
  * - GET /api/auth/callback - Receive token from Hub
- * - POST /api/auth/logout - Clear auth cookie
+ * - POST /api/auth/logout - Clear auth cookies (and revoke refresh session on Hub)
  */
 export function createAuthRoutes(config) {
     const { jwtSecret, hubPublicUrl, selfUrl, frontendUrl, isProduction = process.env.NODE_ENV === 'production', cookieMaxAge = 60 * 60 * 24 * 7, // 7 days
-    cookieDomain, } = config;
+    cookieDomain, hubInternalUrl, hubSecret, refreshCookieName = DEFAULT_REFRESH_COOKIE_NAME, refreshCookieMaxAge = DEFAULT_REFRESH_MAX_AGE, refreshTimeoutMs = 5000, fetchFn = globalThis.fetch, } = config;
     // Validate config at creation time (fail fast)
     if (!jwtSecret) {
         throw new Error('AuthRoutes: jwtSecret is required');
@@ -44,41 +49,157 @@ export function createAuthRoutes(config) {
     if (!frontendUrl) {
         throw new Error('AuthRoutes: frontendUrl is required');
     }
+    const hubBase = hubInternalUrl ? hubInternalUrl.replace(/\/$/, '') : undefined;
+    const refreshEnabled = Boolean(hubBase && hubSecret);
     const app = new Hono();
     // Callback URL for Hub to redirect back to
     const callbackUrl = `${selfUrl}/api/auth/callback`;
     // Hub's Google OAuth endpoint
     const hubAuthUrl = `${hubPublicUrl}/api/auth/google`;
-    /**
-     * GET /me - Check if user is authenticated
-     * Returns user info if authenticated, or loginUrl if not
-     */
-    app.get('/me', (c) => {
-        const token = getCookie(c, 'auth_token');
-        const loginUrl = `${hubAuthUrl}?returnTo=${encodeURIComponent(callbackUrl)}`;
-        if (!token) {
-            return c.json({
-                authenticated: false,
-                user: null,
-                loginUrl,
-            });
+    function clearAuthCookies(c, includeRefresh) {
+        deleteCookie(c, 'auth_token', { path: '/', domain: cookieDomain });
+        if (includeRefresh) {
+            deleteCookie(c, refreshCookieName, { path: '/api/auth', domain: cookieDomain });
+        }
+    }
+    async function refreshViaHub(c) {
+        if (!refreshEnabled || !hubBase || !hubSecret) {
+            return { ok: false, reason: 'unavailable' };
+        }
+        const refreshToken = getCookie(c, refreshCookieName);
+        if (!refreshToken) {
+            return { ok: false, reason: 'unavailable' };
         }
         try {
-            // SECURITY: Algorithm hardcoded to prevent confusion attacks
-            const user = jwt.verify(token, jwtSecret, {
-                algorithms: ['HS256'],
+            const forwardedFor = c.req.header('x-forwarded-for');
+            const ip = forwardedFor ? forwardedFor.split(',')[0]?.trim() : undefined;
+            const signal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+                ? AbortSignal.timeout(refreshTimeoutMs)
+                : undefined;
+            const res = await fetchFn(`${hubBase}/api/internal/sessions/refresh`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Hub-Secret': hubSecret,
+                },
+                body: JSON.stringify({
+                    refreshToken,
+                    userAgent: c.req.header('user-agent') || undefined,
+                    ip: ip || undefined,
+                }),
+                signal,
             });
-            return c.json({ authenticated: true, user });
+            if (res.status === 401 || res.status === 403) {
+                clearAuthCookies(c, true);
+                return { ok: false, reason: 'ended' };
+            }
+            if (!res.ok) {
+                return { ok: false, reason: 'error' };
+            }
+            const data = (await res.json());
+            if (typeof data.accessToken !== 'string' || !data.accessToken) {
+                return { ok: false, reason: 'error' };
+            }
+            // Verify the minted access JWT with our shared secret before trusting it
+            let verifiedUser;
+            try {
+                verifiedUser = jwt.verify(data.accessToken, jwtSecret, {
+                    algorithms: ['HS256'],
+                });
+            }
+            catch {
+                return { ok: false, reason: 'error' };
+            }
+            const accessMaxAge = typeof data.expiresIn === 'number' && data.expiresIn > 0
+                ? data.expiresIn
+                : 60 * 60 * 24;
+            setCookie(c, 'auth_token', data.accessToken, {
+                httpOnly: true,
+                secure: isProduction,
+                sameSite: 'Lax',
+                maxAge: accessMaxAge,
+                path: '/',
+                domain: cookieDomain,
+            });
+            if (typeof data.refreshToken === 'string' && data.refreshToken) {
+                const nextRefreshMaxAge = typeof data.refreshExpiresIn === 'number' && data.refreshExpiresIn > 0
+                    ? data.refreshExpiresIn
+                    : refreshCookieMaxAge;
+                setCookie(c, refreshCookieName, data.refreshToken, {
+                    httpOnly: true,
+                    secure: isProduction,
+                    sameSite: 'Lax',
+                    maxAge: nextRefreshMaxAge,
+                    path: '/api/auth',
+                    domain: cookieDomain,
+                });
+            }
+            return { ok: true, user: data.user ?? verifiedUser };
         }
         catch {
-            // Invalid or expired token - clear it
-            deleteCookie(c, 'auth_token', { path: '/', domain: cookieDomain });
-            return c.json({
-                authenticated: false,
-                user: null,
-                loginUrl,
-            });
+            return { ok: false, reason: 'error' };
         }
+    }
+    /**
+     * GET /me - Check if user is authenticated
+     * Returns user info if authenticated, or loginUrl if not.
+     * When auth_token is missing or expired and Hub refresh is configured,
+     * transparently exchanges the refresh cookie for fresh cookies.
+     */
+    app.get('/me', async (c) => {
+        const token = getCookie(c, 'auth_token');
+        const loginUrl = `${hubAuthUrl}?returnTo=${encodeURIComponent(callbackUrl)}`;
+        let hadInvalidAccessToken = false;
+        if (token) {
+            try {
+                // SECURITY: Algorithm hardcoded to prevent confusion attacks
+                const user = jwt.verify(token, jwtSecret, {
+                    algorithms: ['HS256'],
+                });
+                return c.json({ authenticated: true, user });
+            }
+            catch {
+                hadInvalidAccessToken = true;
+            }
+        }
+        if (refreshEnabled && getCookie(c, refreshCookieName)) {
+            const outcome = await refreshViaHub(c);
+            if (outcome.ok) {
+                return c.json({ authenticated: true, user: outcome.user });
+            }
+            if (hadInvalidAccessToken && outcome.reason !== 'ended') {
+                clearAuthCookies(c, false);
+            }
+        }
+        else if (hadInvalidAccessToken) {
+            // Invalid or expired token - clear it
+            clearAuthCookies(c, false);
+        }
+        return c.json({
+            authenticated: false,
+            user: null,
+            loginUrl,
+        });
+    });
+    /**
+     * POST /refresh - Explicitly exchange the refresh cookie via Hub for a fresh access cookie.
+     * Used by web clients' single-flight 401 interceptors.
+     */
+    app.post('/refresh', async (c) => {
+        if (!refreshEnabled) {
+            return c.json({ error: 'Session refresh not configured' }, 501);
+        }
+        if (!getCookie(c, refreshCookieName)) {
+            return c.json({ error: 'No refresh token' }, 401);
+        }
+        const outcome = await refreshViaHub(c);
+        if (outcome.ok) {
+            return c.json({ ok: true, authenticated: true, user: outcome.user });
+        }
+        if (outcome.reason === 'ended') {
+            return c.json({ error: 'Session expired' }, 401);
+        }
+        return c.json({ error: 'Auth service unavailable' }, 503);
     });
     /**
      * GET /login - Redirect to Hub login
@@ -123,10 +244,30 @@ export function createAuthRoutes(config) {
         }
     });
     /**
-     * POST /logout - Clear auth cookie
+     * POST /logout - Clear auth cookies and best-effort revoke the refresh session on Hub
      */
-    app.post('/logout', (c) => {
-        deleteCookie(c, 'auth_token', { path: '/', domain: cookieDomain });
+    app.post('/logout', async (c) => {
+        const refreshToken = getCookie(c, refreshCookieName);
+        clearAuthCookies(c, Boolean(refreshToken || refreshEnabled));
+        if (refreshEnabled && hubBase && hubSecret && refreshToken) {
+            try {
+                const signal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+                    ? AbortSignal.timeout(refreshTimeoutMs)
+                    : undefined;
+                await fetchFn(`${hubBase}/api/internal/sessions/revoke`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Hub-Secret': hubSecret,
+                    },
+                    body: JSON.stringify({ refreshToken }),
+                    signal,
+                });
+            }
+            catch {
+                // Best-effort revocation; cookies are already cleared locally
+            }
+        }
         return c.json({ success: true });
     });
     return app;

@@ -3,6 +3,8 @@
  * Creates standard auth endpoints that proxy to Hub
  */
 import { Hono } from 'hono';
+export declare const DEFAULT_REFRESH_COOKIE_NAME = "ddk_refresh";
+export declare const DEFAULT_REFRESH_MAX_AGE: number;
 export interface AuthRoutesConfig {
     /**
      * JWT secret for verifying tokens
@@ -40,6 +42,34 @@ export interface AuthRoutesConfig {
      * IMPORTANT: Must match Hub's cookie domain for logout to work properly
      */
     cookieDomain?: string;
+    /**
+     * Hub's internal URL for server-to-server session refresh and revocation
+     * e.g., 'http://hub:6100' or 'http://localhost:6100'
+     * When set alongside hubSecret, enables POST /refresh and transparent
+     * auto-refresh in GET /me when auth_token is expired/missing and the
+     * refresh cookie is present.
+     */
+    hubInternalUrl?: string;
+    /**
+     * Shared secret sent as X-Hub-Secret when calling Hub internal session endpoints.
+     */
+    hubSecret?: string;
+    /**
+     * Refresh cookie name (must match Hub). Default: 'ddk_refresh'.
+     */
+    refreshCookieName?: string;
+    /**
+     * Refresh cookie max age in seconds. Default: 365 days.
+     */
+    refreshCookieMaxAge?: number;
+    /**
+     * Timeout in milliseconds for internal Hub refresh/revoke calls. Default: 5000.
+     */
+    refreshTimeoutMs?: number;
+    /**
+     * Optional fetch implementation (injectable for tests; defaults to globalThis.fetch).
+     */
+    fetchFn?: typeof fetch;
 }
 /**
  * Create auth routes that proxy to Hub
@@ -51,6 +81,8 @@ export interface AuthRoutesConfig {
  * const authRoutes = createAuthRoutes({
  *   jwtSecret: env.jwtSecret,
  *   hubPublicUrl: env.hubPublicUrl,
+ *   hubInternalUrl: env.hubUrl,
+ *   hubSecret: env.hubSecret,
  *   selfUrl: env.selfUrl,
  *   frontendUrl: env.frontendUrl,
  * });
@@ -59,10 +91,11 @@ export interface AuthRoutesConfig {
  * ```
  *
  * This creates:
- * - GET /api/auth/me - Check if user is authenticated
+ * - GET /api/auth/me - Check if user is authenticated (auto-refreshes via Hub if configured)
+ * - POST /api/auth/refresh - Exchange refresh cookie for fresh access + rotated refresh cookies
  * - GET /api/auth/login - Redirect to Hub login
  * - GET /api/auth/callback - Receive token from Hub
- * - POST /api/auth/logout - Clear auth cookie
+ * - POST /api/auth/logout - Clear auth cookies (and revoke refresh session on Hub)
  */
 export declare function createAuthRoutes(config: AuthRoutesConfig): Hono<import("hono/types").BlankEnv, import("hono/types").BlankSchema, "/">;
 //# sourceMappingURL=auth.d.ts.map
